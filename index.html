@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HTML Converter Tool</title>
+    <style>
+        /* styling */
+        body {
+            background-color: #eef2f5;
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .box-container {
+            width: 500px;
+            margin: 50px auto;
+            background: #ffffff;
+            border: 2px solid #333; /* thikthak border */
+            padding: 15px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 20px;
+            color: #222;
+        }
+
+        /* tabs style */
+        .tab-buttons {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
+        .tab-buttons button {
+            width: 48%;
+            padding: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .active-btn {
+            background-color: #333;
+            color: white;
+            font-weight: bold;
+        }
+
+        .upload-zone {
+            border: 2px dashed #777;
+            background: #fafafa;
+            padding: 35px 10px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+
+        .action-button {
+            background: #007bff;
+            color: white;
+            width: 100%;
+            padding: 10px;
+            font-size: 15px;
+            border: 1px solid #0069d9;
+            cursor: pointer;
+        }
+
+        .action-button:hover {
+            background: #0069d9;
+        }
+
+        .status {
+            margin: 10px 0;
+            font-size: 13px;
+            color: red; /* prothome red thakbe */
+            text-align: center;
+        }
+
+        .grid-preview {
+            margin-top: 15px;
+            border-top: 1px dashed #ccc;
+            padding-top: 10px;
+        }
+
+        .thumb {
+            display: inline-block;
+            border: 1px solid #000;
+            padding: 4px;
+            margin: 5px;
+            width: 80px;
+            text-align: center;
+            background: #fff;
+        }
+
+        .thumb img {
+            width: 100%;
+        }
+
+        /* assignment footer info block */
+        .my-footer {
+            margin-top: 25px;
+            padding-top: 10px;
+            border-top: 1px solid #ccc;
+            font-size: 12px;
+            color: #444;
+            text-align: left;
+            line-height: 1.6;
+        }
+        .my-footer a {
+            color: blue;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="box-container">
+    <h1>My Converter (PDF & Images)</h1>
+    <hr>
+
+    <div class="tab-buttons">
+        <!-- manual click handlers inline bosaia disi -->
+        <button id="tab1" class="active-btn" onclick="goTab('pdf')">PDF to Image</button>
+        <button id="tab2" onclick="goTab('img')">Image to PDF</button>
+    </div>
+
+    <!-- PDF section -->
+    <div id="pdfView">
+        <div class="upload-zone" onclick="document.getElementById('input_pdf').click()">
+            <span id="txt_pdf">Click to upload PDF File</span>
+            <input type="file" id="input_pdf" accept="application/pdf" style="display: none;">
+        </div>
+        <button class="action-button" id="start_pdf_btn">Convert Now</button>
+    </div>
+
+    <!-- Image section (hidden default) -->
+    <div id="imgView" style="display: none;">
+        <div class="upload-zone" onclick="document.getElementById('input_img').click()">
+            <span id="txt_img">Click to upload Images</span>
+            <input type="file" id="input_img" accept="image/*" multiple style="display: none;">
+        </div>
+        <button class="action-button" id="start_img_btn" style="background: #28a745; border-color: #28a745;">Merge to PDF</button>
+    </div>
+
+    <!-- status block -->
+    <div id="msgBox" class="status">System Status: Waiting...</div>
+    
+    <!-- output show korar jaiga -->
+    <div id="outGrid" class="grid-preview"></div>
+
+    <!-- student info block checked by teacher -->
+    <div class="my-footer">
+        <strong>Author:</strong> Ahmad Sazid <br>
+        <strong>Email:</strong> <a href="mailto:sazidahmad2nd@gmail.com">sazidahmad2nd@gmail.com</a> <br>
+        <strong>Github:</strong> <a href="https://github.com/angryangel6T9" target="_blank">https://github.com/angryangel6T9</a>
+    </div>
+</div>
+
+<!-- teacher assignment e boile dise external library use korte -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+    // pdf js worker init
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+    // global variable for files
+    var globalPdf = null;
+    var globalImages = [];
+
+    // tab switch korar simple image/pdf logic
+    function goTab(tabName) {
+        document.getElementById('outGrid').innerHTML = '';
+        document.getElementById('msgBox').innerText = 'System Status: Waiting...';
+        document.getElementById('msgBox').style.color = 'red'; // reset color
+        
+        if (tabName == 'pdf') {
+            document.getElementById('pdfView').style.display = 'block';
+            document.getElementById('imgView').style.display = 'none';
+            document.getElementById('tab1').className = 'active-btn';
+            document.getElementById('tab2').className = '';
+        } else {
+            document.getElementById('pdfView').style.display = 'none';
+            document.getElementById('imgView').style.display = 'block';
+            document.getElementById('tab1').className = '';
+            document.getElementById('tab2').className = 'active-btn';
+        }
+    }
+
+    // pdf select change listener
+    document.getElementById('input_pdf').onchange = function(event) {
+        var filesList = event.target.files;
+        if (filesList.length > 0) {
+            globalPdf = filesList[0];
+            document.getElementById('txt_pdf').innerText = "Selected PDF: " + globalPdf.name;
+            document.getElementById('msgBox').innerText = "PDF ready to convert.";
+            document.getElementById('msgBox').style.color = 'green';
+        }
+    };
+
+    // image select change listener
+    document.getElementById('input_img').onchange = function(event) {
+        if (event.target.files.length > 0) {
+            globalImages = []; // reset array
+            // student style traditional loop array manually push korar jonno
+            for(var k=0; k < event.target.files.length; k++) {
+                globalImages.push(event.target.files[k]);
+            }
+            document.getElementById('txt_img').innerText = globalImages.length + " images selected.";
+            document.getElementById('msgBox').innerText = "Images ready to merge.";
+            document.getElementById('msgBox').style.color = 'green';
+        }
+    };
+
+    // PDF -> Image conversion loop logic
+    document.getElementById('start_pdf_btn').onclick = function() {
+        if (globalPdf == null || globalPdf == undefined) {
+            alert('Error: file select koren nai!');
+            return;
+        }
+        
+        var mBox = document.getElementById('msgBox');
+        var grid = document.getElementById('outGrid');
+        grid.innerHTML = ''; // safe clear
+        mBox.innerText = 'Loading PDF file buffer...';
+        mBox.style.color = 'blue';
+        
+        var reader = new FileReader();
+        reader.onload = function() {
+            var rawData = new Uint8Array(this.result);
+            
+            pdfjsLib.getDocument({ data: rawData }).promise.then(function(pdfObject) {
+                var maxPages = pdfObject.numPages;
+                var p = 1;
+                
+                // loop using student style recursive helper function
+                function runPageConvert() {
+                    if (p > maxPages) {
+                        mBox.innerText = 'Finished! All pages converted.';
+                        mBox.style.color = 'green';
+                        return;
+                    }
+                    mBox.innerText = 'Processing page no: ' + p + ' of ' + maxPages;
+                    
+                    pdfObject.getPage(p).then(function(singlePage) {
+                        var customScale = 1.8; // scale up size
+                        var viewport = singlePage.getViewport({ scale: customScale });
+                        
+                        var myCanvas = document.createElement('canvas');
+                        var canvasCtx = myCanvas.getContext('2d');
+                        myCanvas.width = viewport.width;
+                        myCanvas.height = viewport.height;
+                        
+                        var renderOptions = {
+                            canvasContext: canvasCtx,
+                            viewport: viewport
+                        };
+                        
+                        singlePage.render(renderOptions).promise.then(function() {
+                            var jpegUrl = myCanvas.toDataURL('image/jpeg', 0.9);
+                            
+                            // DOM manipulation string concat diye
+                            var wrapper = document.createElement('div');
+                            wrapper.className = 'thumb';
+                            wrapper.innerHTML = '<img src="' + jpegUrl + '"><br><a href="' + jpegUrl + '" download="page_' + p + '.jpg" style="font-size:10px; color:blue;">Save</a>';
+                            grid.appendChild(wrapper);
+                            
+                            p++;
+                            runPageConvert(); // nested recall loop
+                        });
+                    });
+                }
+                
+                runPageConvert(); // start call
+                
+            }).catch(function(e) {
+                mBox.innerText = 'Error happened in pdf.js!';
+                mBox.style.color = 'red';
+                console.log(e);
+            });
+        };
+        reader.readAsArrayBuffer(globalPdf);
+    };
+
+    // Images -> PDF merge algorithm
+    document.getElementById('start_img_btn').onclick = function() {
+        if (globalImages.length == 0) {
+            alert('Error: image select koren nai!');
+            return;
+        }
+        
+        var mBox = document.getElementById('msgBox');
+        var grid = document.getElementById('outGrid');
+        grid.innerHTML = '';
+        mBox.innerText = 'Starting PDF Builder...';
+        mBox.style.color = 'blue';
+        
+        var jsPDFClass = window.jspdf.jsPDF;
+        var finalPdfDoc = null;
+        var imgIndex = 0;
+        
+        function makeLoop() {
+            if (imgIndex >= globalImages.length) {
+                // compile and give link
+                var outputBlob = finalPdfDoc.output('blob');
+                var objectUrl = URL.createObjectURL(outputBlob);
+                
+                var linkTag = document.createElement('a');
+                linkTag.href = objectUrl;
+                linkTag.download = 'my_merged_output.pdf';
+                linkTag.innerText = 'Download Your Final PDF File';
+                linkTag.style.color = 'green';
+                linkTag.style.fontWeight = 'bold';
+                
+                grid.appendChild(linkTag);
+                mBox.innerText = 'PDF creation successful!';
+                mBox.style.color = 'green';
+                return;
+            }
+            
+            mBox.innerText = 'Adding index ' + imgIndex + ' to pdf canvas';
+            
+            var imgFileReader = new FileReader();
+            imgFileReader.onload = function(e) {
+                var b64Data = e.target.result;
+                var dummyImg = new Image();
+                dummyImg.src = b64Data;
+                
+                dummyImg.onload = function() {
+                    var widthX = dummyImg.width;
+                    var heightY = dummyImg.height;
+                    
+                    if (imgIndex == 0) {
+                        // prothom bar dynamic layout setup
+                        finalPdfDoc = new jsPDF({
+                            unit: 'px',
+                            format: [widthX, heightY]
+                        });
+                        finalPdfDoc.addImage(b64Data, 'JPEG', 0, 0, widthX, heightY, undefined, 'FAST');
+                    } else {
+                        // baki gular jonno new page add
+                        finalPdfDoc.addPage([widthX, heightY]);
+                        finalPdfDoc.addImage(b64Data, 'JPEG', 0, 0, widthX, heightY, undefined, 'FAST');
+                    }
+                    
+                    imgIndex++;
+                    makeLoop(); // recurse
+                };
+            };
+            imgReader = imgFileReader.readAsDataURL(globalImages[imgIndex]); // jhamela erate manual array passing
+        }
+        
+        makeLoop();
+    };
+</script>
+</body>
+</html>
